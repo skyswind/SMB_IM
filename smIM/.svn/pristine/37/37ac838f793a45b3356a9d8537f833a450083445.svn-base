@@ -1,0 +1,57 @@
+package com.supermap.smb;
+
+public class TEncoder {
+	public String Encode( String strText )
+	{
+		String strMsg = null;
+		if( m_strTargetExchange !=null && m_strTargetExchange.length() > 0 )
+		{
+			strMsg = String.format("%s#%s#~%s~%s", m_strProtocol, m_strTargetExchange, m_strSender, strText ); // 简要格式
+		}
+		else
+		{
+			strMsg = String.format("~%s~%s", m_strSender, strText ); // 简要格式
+		}
+		return strMsg;
+	}	
+	
+	public String EncodeCommand( String strCmd )
+	{
+		String strMsg = null;
+		if( m_strTargetExchange !=null && m_strTargetExchange.length() > 0 )
+		{
+			strMsg = String.format("%s#%s#~%s~^%s^", m_strProtocol, m_strTargetExchange, m_strSender, strCmd ); // 简要格式
+		}
+		else
+		{
+			strMsg = String.format("~%s~^%s^", m_strSender, strCmd ); // 简要格式
+		}
+		return strMsg;
+	}		
+	
+	public String Encode( double x, double y, double z, double dSpeed, double dBearing, int nLevel )
+	{
+		String strMsg = null;
+		if( m_strTargetExchange !=null && m_strTargetExchange.length() > 0 )
+		{
+			strMsg = String.format("%s#%s#~%s~&%.5f,%.5f,%.2f,%.1f,%.1f,%d&", m_strProtocol, m_strTargetExchange, m_strSender, x, y, z, dSpeed, dBearing, nLevel ); // 简要格式
+		}
+		else
+		{
+			strMsg = String.format("~%s~&%.5f,%.5f,%.2f,%.1f,%.1f,%d&", m_strSender, x, y, z, dSpeed, dBearing, nLevel ); // 简要格式
+		}
+		return strMsg;
+	}
+	
+	public void setSender( String strSender ){
+		m_strSender = strSender;
+	}
+	
+	public void setTargetExchange( String strTargetExchange ){
+		m_strTargetExchange = strTargetExchange;
+	}
+	
+	protected String m_strSender = "";
+	protected String m_strTargetExchange="";
+	protected String m_strProtocol="smb0";		
+}

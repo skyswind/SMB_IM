@@ -1,0 +1,165 @@
+package com.supermap.smb;
+
+//import com.supermap.smb.MQCallBack;
+
+public class SMBClient {
+	
+	private TConnector m_Consumer = null;
+	private TConnector m_Producer = null;
+	private SMBCallback m_Callback = null;  
+	
+	private TBase.MQCallBackInner m_callBackProducer = null;
+	private TBase.MQCallBackInner m_CallbackConsumer = null;	
+	
+	private TEncoder m_SMBEncoder = new TEncoder();
+	
+	public SMBClient() {
+		m_callBackProducer = new TBase.MQCallBackInner() {
+			public void onMessageReceived(String strMsg) {
+				onSMBReceivedProducer(strMsg);
+			}
+
+			public void onStatusChanged(int nStatus) {
+				onSMBStatusChangedProducer(nStatus);
+			}
+		};
+
+		m_CallbackConsumer = new TBase.MQCallBackInner() {
+			public void onMessageReceived(String strMsg) {
+				onSMBReceivedConsumer(strMsg);
+			}
+
+			public void onStatusChanged(int nStatus) {
+				onSMBStatusChangedProducer(nStatus);
+			}
+		};
+
+		m_Consumer = new TConnector(true, m_CallbackConsumer);
+		m_Producer = new TConnector(false, m_callBackProducer);
+	}
+	
+	public void Dispose() {
+
+	}
+	
+	public void setInExchange( String strExchange )
+	{
+		if( m_Consumer !=null ){
+			m_Consumer.setExchange( strExchange );
+		}
+	}
+	
+	public void setInExchangeType( String strExchangeType )
+	{
+		if( m_Consumer !=null ){
+			m_Consumer.setExchangeType( strExchangeType );
+		}
+	}
+	
+    public void setInRoutingKey(String strRoutingKey){  
+    	if( m_Consumer !=null ){
+    		m_Consumer.setRoutingKey( strRoutingKey );
+    	}
+    }
+    
+	public void setOutExchange( String strExchange )
+	{
+		m_Producer.setExchange( strExchange );
+	}
+	
+	public void setOutExchangeType( String strExchangeType )
+	{
+		m_Producer.setExchangeType( strExchangeType );
+	}
+	
+    public void setOutRoutingKey(String strRoutingKey){  
+    	m_Producer.setRoutingKey( strRoutingKey );
+    }    
+    
+	public void setCallback( SMBCallback callback )
+	{
+		this.m_Callback = callback;  	
+	}
+		
+	public void setExtServer( String strExtServer )	{
+    	if( m_Consumer !=null ){
+    		m_Consumer.setExtServer( strExtServer );
+    	}
+    	
+    	if( m_Producer !=null ){
+    		m_Producer.setExtServer( strExtServer );
+    	}	    	
+	}
+
+	public boolean Connect(String strUserName, String strPassword){
+		if( m_Consumer !=null ){
+			m_Consumer.Connect(strUserName, strPassword);
+		}
+		
+		if( m_Producer !=null ){
+			m_Producer.Connect(strUserName, strPassword);
+		}		
+		return true;
+	}
+	
+	protected boolean Publishing( String strMsg )
+	{
+		if( m_Producer != null && strMsg != null )
+		{
+			m_Producer.Publish( strMsg );
+			return true;
+		}
+		return false;		
+	}
+	
+	public void PublishText( String strText ){
+		String strMsg = m_SMBEncoder.Encode( strText );
+		Publishing( strMsg );
+	}	
+	
+	public void PublishCommand( String strCmd )	{
+		String strMsg = m_SMBEncoder.EncodeCommand( strCmd );
+		Publishing( strMsg );
+	}		
+	
+	public void PublishLocation( double x, double y, double z, double dSpeed, double dBearing, int nLevel )	{
+		String strMsg = m_SMBEncoder.Encode( x, y, z, dSpeed, dBearing, nLevel );
+		Publishing( strMsg );
+	}
+	
+	public int getStatus() {
+		return m_nStatus;
+	}
+
+	public void setSender(String strSender) {
+		m_SMBEncoder.setSender(strSender);
+	}
+
+	public void setTargetExchange(String strTargetExchange) {
+		m_SMBEncoder.setTargetExchange(strTargetExchange);
+	}
+
+	protected void onSMBReceivedProducer(String strMsg) {
+		if (m_Consumer != null) {
+			m_Consumer.setConnect(strMsg, true);
+		}
+	}
+
+	protected void onSMBStatusChangedProducer(int nStatus) {
+		m_nStatus = nStatus;
+		if (m_Callback != null) {
+			m_Callback.onStatusChanged(nStatus);
+		}
+	}
+
+	protected void onSMBReceivedConsumer(String strMsg) {
+		if (m_Callback != null) {
+			SMBMessage smbMsg = TDecoder.Parsing(strMsg);
+			if (smbMsg != null) {
+				m_Callback.onMessageReceived(smbMsg);
+			}
+		}
+	}
+	
+	protected int m_nStatus = 0;
+}

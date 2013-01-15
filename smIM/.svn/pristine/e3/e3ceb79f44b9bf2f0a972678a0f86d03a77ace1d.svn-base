@@ -1,0 +1,6 @@
+package com.supermap.smb;
+
+public interface SMBCallback {
+	void onMessageReceived( SMBMessage smbMsg );
+    void onStatusChanged( int nStatus );
+}

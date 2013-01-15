@@ -1,0 +1,143 @@
+package com.supermap.smb;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.ConsumerCancelledException;
+import com.rabbitmq.client.MessageProperties;
+import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.ShutdownSignalException;
+
+public class TConsumer extends TBase{
+
+    public void setRoutingKey(String strRoutingKey){  
+    	m_strRoutingKey = strRoutingKey;  
+    }  
+    
+	public void setConnectSMBFlag( boolean bNeedConnecting )
+	{
+		super.setConnectSMBFlag( bNeedConnecting );
+		m_bInitOk = false;
+		m_Consumer = null;
+		//System.out.println( "m_Consumer.setConnectSMBFlag" );
+	}    
+    
+	public void DisposeSMB() {
+		super.DisposeSMB();
+		m_bInitOk = false;
+		m_Consumer = null;
+	}
+	
+	@Override
+	public void run(){
+		super.run();
+		
+//		while ( m_bRunning )
+		{		
+	  		try {	
+				if( m_bNeedConnecting ) //  ( !m_bConnected || 
+		  		{
+					//System.out.println( "Consumer m_bNeedConnecting..." );
+					
+					m_bInitOk = false;
+					
+					ConnectSMB();
+		  		}
+	  		
+				if( m_bInitOk )
+				{
+					ParsingSMB();
+				}
+
+//				Thread.sleep(20);
+			} catch (Exception e1) { //Interrupted
+				e1.printStackTrace();
+			}			
+		}
+	}
+	
+	private void ParsingSMB(){
+		if( m_Consumer != null && m_Connection != null && m_Connection.isOpen() )
+		{
+			QueueingConsumer.Delivery delivery = null;
+			try {
+				delivery = m_Consumer.nextDelivery();
+				
+				if( delivery != null )
+				{
+					String strMessage=null;
+					try {
+						strMessage = new String(delivery.getBody(),"UTF-8");
+					} catch (UnsupportedEncodingException e) {
+					}
+					if( strMessage != null && this.m_callBack != null )
+					{
+						this.m_callBack.onMessageReceived( strMessage );
+					}
+				}				
+			} 
+			catch (InterruptedException e) {
+				//System.out.println( "Consumer InterruptedException" );
+				return;
+			} 
+			catch (ShutdownSignalException e) {
+				//System.out.println( "Consumer ShutdownSignalException" );
+			}
+			catch (ConsumerCancelledException e) {
+				//System.out.println( "Consumer ConsumerCancelledException" );
+			}			
+		}
+	}
+	
+	private void ConnectSMB(){
+		//System.out.println( "Consumer Connecting..." );
+		if( connectToRabbitMQ() )
+		{
+			InitQueueing();
+		}
+	}
+	
+	private void InitQueueing(){
+		//System.out.println( "Consumer InitQueueing..." );
+		try {
+			if( m_Connection != null )
+			{
+				String strQueueName = m_Channel.queueDeclare().getQueue();
+				String strRoutingKey = "";
+				
+	          	if( m_strExchangeType.equalsIgnoreCase( "direct" ) )
+	        	{
+	          		if( !m_strRoutingKey.equalsIgnoreCase( "" ) )
+	          		{
+	          			strQueueName = m_strRoutingKey;
+	          			strRoutingKey = m_strRoutingKey;
+	          		}
+	        	}
+
+	          	m_Channel.queueBind( strQueueName, m_strExchange, strRoutingKey );
+	          	
+				m_Consumer = new QueueingConsumer(m_Channel);
+				m_Channel.basicConsume( strQueueName, true, m_Consumer );	
+				
+	          	m_bInitOk = true;
+	          	m_bNeedConnecting = false;
+			} 
+		}catch (IOException e) {
+//			m_bException = true;
+			m_bInitOk = false;
+			e.printStackTrace();
+		}
+	}
+	
+	private	String m_strRoutingKey = "";// "gpsUnlockerIn";
+	private	QueueingConsumer m_Consumer = null;
+	
+	
+	private	boolean m_bInitOk = false;  	
+}
+
+
+

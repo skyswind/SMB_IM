@@ -1,0 +1,176 @@
+package com.supermap.smb;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.rabbitmq.client.MessageProperties;
+import com.rabbitmq.client.ShutdownSignalException;
+
+public class TProducer extends TBase{
+      
+//	protected long m_nCurTickCountCur = 0;
+	protected long m_nCurTickCountPrev = 0;
+	
+	@Override
+  	public void Publish( String strRouteKey, String strMsg )
+	{ // 添加到发送队列中
+  		m_strExchanges.add( strRouteKey );
+  		m_strMessages.add( strMsg );
+	}  
+
+	@Override
+	public void run() {
+		super.run();
+		
+		boolean bMsgSent = true;
+//		while ( m_bRunning ) 
+		{
+	  		try {	
+		  		if( m_bNeedConnecting )
+		  		{
+		  			m_bConnected = false;
+		  			ConnectSMB();
+		  		}
+		  		
+				if( m_Channel != null && m_Channel.isOpen() )//m_bConnected )
+				{
+					bMsgSent = true;
+			  		while( m_strExchanges.size() > 0 && bMsgSent )
+			  		{
+			  			String strUUID = m_strExchanges.get( 0 );
+			  			String strMsg = m_strMessages.get( 0 );
+			  			bMsgSent = Publishing( strUUID, strMsg );
+			  			if( bMsgSent )
+			  			{
+							m_strExchanges.remove( 0 );
+							m_strMessages.remove( 0 );	  				
+			  			}
+			  		}
+			  		
+			  		if( bMsgSent == false ){
+						long nTickCountCur = System.currentTimeMillis();
+						if( nTickCountCur - m_nCurTickCountPrev > 3000 )
+						{
+							m_nCurTickCountPrev = nTickCountCur; 
+							m_bNeedConnecting = true;
+						//	System.out.println( "Producer currentTimeMillis==" + nTickCountCur );
+						}			  			
+			  		}
+		  		}
+				else
+				{
+					long nTickCountCur = System.currentTimeMillis();
+					if( nTickCountCur - m_nCurTickCountPrev > 8000 )
+					{
+						m_nCurTickCountPrev = nTickCountCur; 
+						m_bNeedConnecting = true;
+						//System.out.println( "Producer currentTimeMillis==" + nTickCountCur );
+					}
+				}
+
+//				Thread.sleep(20);
+			} catch (Exception e1) {//Interrupted
+				e1.printStackTrace();
+			}
+		}
+	}    
+	
+	private void ConnectSMB(){
+		m_bConnected = false;
+		
+		//System.out.println( "Producer Connecting..." );
+		if( Connecting( this.m_strServer ) ) // 优先对当前的服务器地址进行判断
+		{ 
+			return ;
+		}
+		
+		if( m_callBack != null )
+		{
+			m_callBack.onStatusChanged( 0 ); // 0  连接中...
+		}
+		
+		String strServerPrev = m_strServer;
+		int nCount = m_strServers.size();
+		int i=0;
+		for(i=0;i<nCount;i++)
+		{ // 逐个对预置的服务器进行连接判断
+			String strServer = m_strServers.get( i );
+			if( !strServerPrev.equalsIgnoreCase( strServer ) )  // 刚刚判断过了，就不必马上再进行判断了
+			{
+				if( Connecting( strServer ) )
+				{ 
+					return ;
+				}
+			}
+		}
+	}
+	private boolean Connecting( String strServer ){
+		
+		if( TToolkit.isServerReachable( strServer ) )
+		{ // 优先对当前的服务器地址进行判断
+			m_strServer = strServer;
+			if( connectToRabbitMQ() )
+			{
+				if( m_callBack != null )
+				{
+					m_callBack.onMessageReceived( m_strServer );
+					if( m_callBack != null )
+					{
+						m_callBack.onStatusChanged( 1 ); // 1  已经连接...
+					}					
+				}
+				
+				m_bNeedConnecting = false;
+				return true;
+			}
+		}
+		return false;
+	}
+	
+  	private boolean Publishing( String strRoutingKey, String strMsg )
+	{ // 真正发送出去....
+		try {
+			if( m_Channel != null )
+			{
+				m_Channel.queueDeclare( strRoutingKey, true, false, false, null);
+				m_Channel.queueBind( strRoutingKey, m_strExchange, strRoutingKey );
+				m_Channel.basicPublish( m_strExchange, strRoutingKey, MessageProperties.PERSISTENT_TEXT_PLAIN, strMsg.getBytes("UTF-8"));
+				
+				return true;
+			}
+		} 
+		catch (IOException e) {
+			//System.out.println( "Producer IOException" );
+//			m_bNeedConnecting = true;
+		}
+		return false;
+	} 
+  	
+  	public void AddServer( String strServer )
+  	{
+  		if( strServer!= null && strServer.length() > 0 )
+  		{
+  			m_strServers.add( strServer );
+  		}
+  	}
+  	
+  	public void RemoveServers()
+  	{
+  		m_strServers.clear();
+  	}  	
+  	
+//    public void setCallBack(MQCallBack callBack){  
+//        this.m_callBack = callBack;  
+//    }  
+    
+  	private List<String> m_strExchanges = new ArrayList<String>();
+  	private List<String> m_strMessages = new ArrayList<String>();
+  	private List<String> m_strServers = new ArrayList<String>();
+  	
+//  	private	MQCallBack m_callBack = null;
+}

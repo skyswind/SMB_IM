@@ -1,0 +1,162 @@
+package com.supermap.smb;
+
+import java.io.IOException;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+
+public class TBase{
+	protected String m_strServer = null;
+	protected String m_strExchange = null;
+	protected String m_strExchangeType = null;
+	protected String m_strRoutingKey=null;
+
+	protected Connection m_Connection = null;
+	protected Channel m_Channel = null;
+	
+	protected boolean m_bRunning = true;
+	protected boolean m_bConnected = false;
+	protected boolean m_bNeedConnecting = false;
+	
+	protected String m_strUserName = "";
+	protected String m_strPassword = "";	
+	
+	public TBase() {
+		m_strServer = "1.202.165.40:5672";
+	}
+	
+	public void setUserInfo(String strUserName, String strPassword) {
+		m_strUserName = strUserName;
+		m_strPassword = strPassword;
+	}
+	
+	public void setParam(String strExchange, String strExchangeType) {
+		m_strExchange = strExchange;
+		m_strExchangeType = strExchangeType;
+	}
+
+	public void setServer(String strServer) {
+		m_strServer = strServer;
+	}
+
+	public void setRoutingKey(String strRoutingKey) {
+		m_strRoutingKey = strRoutingKey;
+	}
+
+	public void setConnectSMBFlag(boolean bNeedConnecting) {
+		m_bNeedConnecting = bNeedConnecting;
+	}
+	
+	public boolean isConnected() {
+		if (m_Connection != null && m_Connection.isOpen()) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	public void Dispose() {
+		m_bRunning = false;
+		DisposeSMB();
+	}
+
+	public void DisposeSMB() {
+		DisposeChannel();
+		DisposeConnection();
+	}
+	
+	protected void DisposeChannel() {
+		try {
+			if (m_Channel != null && m_Channel.isOpen()) {
+				m_Channel.abort();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		m_Channel = null;
+	}	
+	
+	protected void DisposeConnection() {
+		try {
+			if (m_Connection != null && m_Connection.isOpen()) {
+				m_Connection.close();
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		m_Connection = null;
+	}	
+
+	public boolean connectToRabbitMQ()
+	{
+		//System.out.println( "Connecting..." ); 
+		try {
+			ConnectionFactory connectionFactory = new ConnectionFactory();
+			String[] strServer = m_strServer.split(":");
+			if (strServer != null && strServer.length > 1) {
+				connectionFactory.setHost(strServer[0]);
+				connectionFactory.setPort(Integer.parseInt(strServer[1]));
+			} else {
+				connectionFactory.setHost(m_strServer);
+			}
+	
+			DisposeChannel();
+			DisposeConnection();
+			
+			connectionFactory.setUsername( m_strUserName );
+			connectionFactory.setPassword( m_strPassword );
+			connectionFactory.setConnectionTimeout(10000);
+			m_Connection = connectionFactory.newConnection();
+			if (m_Connection != null) {
+
+				m_Channel = m_Connection.createChannel();
+				DeclareExchange();
+				
+				return true;
+			}          
+		} catch (IOException e) {
+//			e.printStackTrace();
+		}
+		return false;
+	}
+
+	public boolean DeclareExchange() {
+		try {
+			m_bConnected = false;
+
+			if (m_Channel != null) {
+				if (m_strExchangeType.equalsIgnoreCase("direct")) {
+					m_Channel.exchangeDeclare(m_strExchange, m_strExchangeType, true);// true //false
+				} else {
+					m_Channel.exchangeDeclare(m_strExchange, m_strExchangeType, false); // true
+				}
+
+				m_bConnected = true;
+				return true;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	public void run() {
+	}
+
+	public void Publish(String strRouteKey, String strMsg) {
+	}
+
+	public interface MQCallBackInner {
+		void onMessageReceived(String strMsg);
+		void onStatusChanged(int nStatus);
+	}
+
+	public void setCallBack(MQCallBackInner callBack) {
+		this.m_callBack = callBack;
+	}
+
+	protected MQCallBackInner m_callBack = null;
+}
+

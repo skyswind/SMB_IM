@@ -1,0 +1,29 @@
+package com.supermap.smb;
+
+public class SMBMessage {
+	public String strLocation = null;
+	public String strSender = null;
+	public String strCommand = null;
+	public String strSms = null;
+	public SMBLocation Location = null;
+	
+//	static public SMBMessage FromMessage(Message msg){
+//		SMBMessage smbMsg = null;
+//		if (msg != null) 
+//		{
+//			Bundle bundle = msg.getData();
+//			if( bundle != null ){
+//				smbMsg = new SMBMessage();
+//				smbMsg.strSender = bundle.getString( "SMBSender" );
+//				smbMsg.strLocation = bundle.getString( "SMBLocation" );
+//				smbMsg.strCommand = bundle.getString( "SMBCMD" );
+//				smbMsg.strSms = bundle.getString( "SMBSMS" );
+//				
+//				if( smbMsg.strLocation != null ){
+//					smbMsg.Location = SMBDecoder.ParsingLocation( smbMsg.strLocation );
+//				}
+//			}
+//		}
+//		return smbMsg;
+//	}
+}

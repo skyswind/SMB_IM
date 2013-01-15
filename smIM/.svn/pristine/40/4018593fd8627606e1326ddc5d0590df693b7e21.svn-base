@@ -1,0 +1,133 @@
+package com.supermap.smb;
+
+public class TConnector {
+	private TBase 			m_Base = null;
+	private TRunner			m_Runner = null;
+	private Thread 			m_Thread = null; 
+	
+	private String 			m_strExchange="";
+	private String 			m_strExchangeType = ""; //  fanout
+	private String 			m_strRoutingKey = "";	
+	
+	private String 			m_strServer = "1.202.165.40:5672";
+	private String 			m_strExtServer="";
+	private boolean 		m_bConsume = false;
+	private TBase.MQCallBackInner m_callBack = null;
+	
+	public TConnector(boolean bConsume, TBase.MQCallBackInner callBack){
+		m_bConsume = bConsume;
+		m_callBack = callBack;
+		if( !m_bConsume ){
+			m_strExchange="MapDroid";
+			m_strExchangeType = "direct";
+			m_strRoutingKey = "smGateWay";
+		}
+		else
+		{
+			m_strExchangeType = "fanout";
+		}
+	}
+	
+	public boolean Publish( String strMsg ){
+		if( m_Base !=null ){
+			m_Base.Publish( m_strRoutingKey, strMsg );
+		}
+		return false;
+	}
+	
+	public void setConnect(String strServer, boolean bCanConnect){
+		m_Base.setServer( strServer );
+		m_Base.setConnectSMBFlag(bCanConnect);
+	}
+	
+	public void setExchange( String strExchange )
+	{
+		m_strExchange = strExchange;
+	}
+	
+	public void setExchangeType( String strExchangeType )
+	{
+		m_strExchangeType = strExchangeType;
+	}
+	
+    public void setRoutingKey(String strRoutingKey){  
+    	m_strRoutingKey = strRoutingKey;  
+    }
+    
+	public void setExtServer( String strExtServer )	{
+		m_strExtServer = strExtServer;
+	}    
+	protected void StartThread(){
+		if( m_Thread == null )
+		{	    	
+			m_Thread = new Thread( m_Runner );
+		}
+		if( m_Thread != null && !m_Thread.isAlive() )
+		{	    	
+			m_Thread.start();
+		}		
+	}
+	
+	public boolean Connect(String strUserName, String strPassword)
+	{
+		if( m_strExchange == null || m_strExchange == "")
+		{
+			return false;
+		}
+		
+//		if( m_Consumer != null && m_Consumer.m_strExchange != null && 
+//			m_strInExchange.equalsIgnoreCase( m_Consumer.m_strExchange ) && 
+//			m_Consumer.isConnected() )
+//		{ // 通道相同，就别再连了
+//			return true;
+//		}
+		
+		try
+		{
+	    	if( m_Base == null )
+	    	{
+	    		if( m_bConsume )
+	    		{
+		    		m_Base = new TConsumer();
+		    		m_Base.setServer( m_strServer );
+	    		}
+	    		else
+	    		{
+	    			TProducer MQBase = new TProducer();
+	    			if( m_strExtServer!=null && !m_strExtServer.equalsIgnoreCase("")){
+	    				MQBase.setServer( m_strExtServer );
+	    				MQBase.AddServer( m_strExtServer );
+	    			}
+	    			MQBase.AddServer( "1.202.165.40:5672" );
+	    			MQBase.AddServer( "192.168.174.103:5672" );
+	    			
+	    			m_Base = MQBase;
+	    		}
+	    		m_Base.setCallBack( m_callBack );
+	    		m_Base.setUserInfo(strUserName, strPassword);
+	    	}
+	    	else
+	    	{
+	    		m_Base.DisposeSMB();
+	    	}
+	    	
+	    	m_Base.setParam( m_strExchange, m_strExchangeType );
+	    	m_Base.setRoutingKey( m_strRoutingKey );
+	    	m_Base.setConnectSMBFlag( !m_bConsume );
+	    	
+			if( m_Runner == null )
+			{
+				m_Runner = new TRunner();
+				m_Runner.setBase( m_Base );
+			}
+			
+			StartThread();	 
+			
+			return true;
+		}
+		catch( Exception e )
+		{
+		}
+		return false;
+	}	
+}

@@ -1,0 +1,73 @@
+package com.supermap.smb;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
+
+public class TToolkit {
+	public static boolean isServerReachable(String strIP, int nPort) {
+		boolean bRet = false;
+		Socket s = null;
+		try {
+			s = new Socket();
+			InetAddress inetAddress = InetAddress.getByName(strIP);
+			SocketAddress remoteAddr = new InetSocketAddress(
+					inetAddress.getHostAddress(), nPort);
+			s.connect(remoteAddr, 2000);
+			bRet = true;
+		} catch (IOException e) {
+		} finally {
+			try {
+				if (s != null) {
+					s.close();
+				}
+			} catch (Exception ee) {
+			}
+		}
+		return bRet;
+	}
+	
+	public static boolean isServerReachable(String strServer) {
+		boolean bRet = false;
+		String strIP="192.168.174.103";
+		int nPort = 5672;
+		
+		String[] strServers = strServer.split(":");
+		if (strServers != null && strServers.length > 1) {
+			strIP = strServers[0];
+			nPort = Integer.parseInt( strServers[1] );
+		} else {
+			strIP = strServer;
+		}
+		
+		SocketAddress remoteAddr = null;
+		InetAddress inetAddress = null;
+		Socket s = null;
+		try {
+			s = new Socket();
+			inetAddress = InetAddress.getByName(strIP);
+			remoteAddr = new InetSocketAddress(
+					inetAddress.getHostAddress(), nPort);
+			s.connect(remoteAddr, 2000);
+			bRet = true;
+		} catch (IOException e) {
+//			e.printStackTrace();
+		} finally {
+			try {
+				if (s != null && !s.isClosed() ) {
+					s.close();
+				}
+				
+				remoteAddr = null;
+				inetAddress = null;
+				s = null;
+				
+			} catch (Exception ee) {
+//				ee.printStackTrace();
+			}
+		}
+		return bRet;
+	}
+}

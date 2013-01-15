@@ -1,0 +1,89 @@
+package com.supermap.smb;
+
+public class TDecoder {
+	public static SMBMessage Parsing( String strMsg ){
+		SMBMessage smbMsg = null;
+		if (strMsg != null) {
+			smbMsg = new SMBMessage();
+			smbMsg.strSender = GetTag(strMsg, "~");
+			smbMsg.strLocation = GetTag(strMsg, "&"); // ^
+			smbMsg.strCommand = GetTag(strMsg, "^"); //
+			smbMsg.strSms = ParsingText(strMsg);
+			smbMsg.Location = ParsingLocation( smbMsg.strLocation );
+		}
+		
+		return smbMsg;
+	}
+	
+	static String GetTag( String strMsg, String strTagKey ){
+		int nPos0 = strMsg.indexOf( strTagKey );
+		if( nPos0 >= 0 )
+		{
+			nPos0+=1;
+			int nPos1 = strMsg.indexOf( strTagKey, nPos0 );
+			if( nPos1 > nPos0 )
+			{
+				return strMsg.substring( nPos0, nPos1 );
+			}
+		}
+		return null;
+	}
+	
+	static SMBLocation ParsingLocation(String strLocMsg) {
+		SMBLocation smbLoc = null;
+		if( strLocMsg != null )
+		{
+			String[] strLoc = strLocMsg.split(",");
+			if (strLoc != null && strLoc.length > 1) {
+				try {
+					smbLoc = new SMBLocation();
+					smbLoc.x = (double) Double.valueOf(strLoc[0]);
+					smbLoc.y = (double) Double.valueOf(strLoc[1]);
+					if (strLoc.length > 2) {
+						smbLoc.z = (double) Double.valueOf(strLoc[2]);
+						if (strLoc.length > 3) {
+							smbLoc.speed = (double) Double.valueOf(strLoc[3]);
+							if (strLoc.length > 4) {
+								smbLoc.azimuth = (double) Double.valueOf(strLoc[4]);
+								if (strLoc.length > 5) {
+									smbLoc.nOption = (int) Integer.valueOf( strLoc[5]);
+								}
+							}
+						}
+					}
+				} catch (Exception e) {
+	
+				}
+			}
+		}
+		return smbLoc;
+	}
+	
+	static String ParsingText( String strMsg ){
+		int nPos1 = strMsg.lastIndexOf( "~" );
+		int nPos2 = strMsg.lastIndexOf( "^" );
+		int nPos3 = strMsg.lastIndexOf( "#" );
+		int nPos4 = strMsg.lastIndexOf( "&" );
+		if( nPos1 < nPos2 )
+		{
+			nPos1 = nPos2;
+		}
+		
+		if( nPos1 < nPos3 )
+		{
+			nPos1 = nPos3;
+		}
+		
+		if( nPos1 < nPos4 )
+		{
+			nPos1 = nPos4;
+		}		
+		
+		String strText = null;
+		if( nPos1 >= 0 )
+		{
+			strText = strMsg.substring( nPos1+1 );
+		}
+		return strText;
+	}
+}

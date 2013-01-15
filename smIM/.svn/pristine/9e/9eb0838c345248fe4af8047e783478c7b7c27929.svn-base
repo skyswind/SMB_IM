@@ -1,0 +1,18 @@
+package com.supermap.smb;
+
+public class SMBLocation {
+	public void SMBLocation(){
+		x = 0.0;       // 度
+		y = 0.0;       // 度
+		z = 0.0;		// 米
+		speed = 0.0;	// 米/秒
+		azimuth = 0.0;	// 方位角(顺时针方向), 正北为0, 正东为90, 正南180, 正西270
+		nOption = -1; 	// -2 登录报到; -1GPS数据; 0--19为地图层级序号; 其他 未定义
+	}
+	public double x;       // 度
+	public double y;       // 度
+	public double z;		// 米
+	public double speed;	// 米/秒
+	public double azimuth;	// 方位角(顺时针方向), 正北为0, 正东为90, 正南180, 正西270
+	public int nOption; 	// -2 登录报到; -1GPS数据; 0--19为地图层级序号; 其他 未定义
+}

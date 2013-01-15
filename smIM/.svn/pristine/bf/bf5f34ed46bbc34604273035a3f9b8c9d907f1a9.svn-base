@@ -1,0 +1,32 @@
+package com.supermap.smb;
+
+public class TRunner  implements Runnable {
+
+	public void setBase( TBase Base ){
+		m_Base = Base;
+	}
+	
+	public void Dispose() {
+		m_bRunning = false;
+		m_Base = null;
+	}	
+	
+	@Override
+	public void run() {
+		m_bRunning = true;
+		while (m_bRunning) {
+			try {
+				if (m_Base != null) {
+					m_Base.run();
+				}
+
+				Thread.sleep(50);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+		}
+	}
+	
+	private TBase m_Base = null;
+	private boolean m_bRunning = true;
+}
